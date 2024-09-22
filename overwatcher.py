@@ -85,7 +85,7 @@ def main():
             try:
                 data = osint_queue.get(timeout=1)
                 osint_handler.check_virus_total(data)
-                #osint_handler.check_otx(data)
+                osint_handler.check_otx(data[0])
             except:
                 pass  # Continue looping if no data is available
 

@@ -2,6 +2,7 @@ import requests
 import sqlite3
 from datetime import datetime
 import ipaddress
+from collections import deque
 
 class OSINT:
     def __init__(self, print_lock ,vt_api_key, otx_api_key, domain_db_path, ip_db_path, dns_db_lock, ip_db_lock):
@@ -45,7 +46,7 @@ class OSINT:
                 json_response = response.json()
                 positives = json_response['data']['attributes']['last_analysis_stats']['malicious']
                 tags = json_response['data']['attributes']['tags']
-                print(f"{data[0]} - Malicious Detections: {positives} with tags: {tags}")
+                print(f"[{data[0]}] - VT Detections: {positives} tags: {tags}")
 
                 # Update the appropriate database
                 if is_ip:
@@ -73,22 +74,32 @@ class OSINT:
         url = f"https://otx.alienvault.com/api/v1/indicators/IPv4/{indicator}/general" if is_ip else f"https://otx.alienvault.com/api/v1/indicators/domain/{indicator}/general"
         headers = {"X-OTX-API-KEY": self.otx_api_key}
 
+        indicator_facts = set()  # Using a set to automatically handle duplicate tags
+        
         try:
             response = requests.get(url, headers=headers)
             if response.status_code == 200:
                 json_response = response.json()
-                facts = json_response.get('pulse_info', {}).get('pulses', [])
-                if facts:
-                    print(f"Facts for {indicator}:")
-                    for fact in facts:
-                        print(f"- {fact.get('name')}: {fact.get('description')}")
-                else:
-                    print(f"No indicator facts found for {indicator}.")
+                
+                # Check for pulse_info and extract tags
+                if 'pulse_info' in json_response and 'pulses' in json_response['pulse_info']:
+                    for pulse in json_response['pulse_info']['pulses']:
+                        if 'tags' in pulse and pulse['tags']:  # Check if 'tags' exists and is not empty
+                            indicator_facts.update(pulse["tags"])  # Add tags to set (no duplicates)
+                
+                # Only print if indicator_facts has tags
+                if indicator_facts:
+                    # Convert set to list, and limit to 5 tags
+                    limited_tags = list(indicator_facts)[:5]
+                    print(f"[{indicator}] OTX Tags: {', '.join(limited_tags)}")
             else:
                 print(f"Failed to retrieve indicator facts for {indicator}: {response.status_code} - {response.text}")
+                        
         except Exception as e:
             print(f"An error occurred while retrieving facts for {indicator}: {e}")
 
+
+                 
     def update_info(self, conn, value, positives, tags, db_path):
         now = datetime.now()
         cursor = conn.cursor()
