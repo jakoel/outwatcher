@@ -1,4 +1,4 @@
-# OutWatcher - Network and DNS Monitoring Tool with OSINT Integration
+# OutWatcher
 
 ## Overview
 
