@@ -51,12 +51,12 @@ class OSINT:
                 if is_ip:
                     with self.ip_db_lock:
                         conn = sqlite3.connect(self.ip_db_path)
-                        self.update_info(conn, data, positives, self.ip_db_path)
+                        self.update_info(conn, data, positives, tags ,self.ip_db_path)
                         conn.close()
                 else:
                     with self.dns_db_lock:
                         conn = sqlite3.connect(self.domain_db_path)
-                        self.update_info(conn, data, positives, self.domain_db_path)
+                        self.update_info(conn, data, positives, tags, self.domain_db_path)
                         conn.close()
             else:
                 print(f"Failed to retrieve data for {data[0]}: {response.status_code} - {response.text}")
@@ -89,29 +89,38 @@ class OSINT:
         except Exception as e:
             print(f"An error occurred while retrieving facts for {indicator}: {e}")
 
-    def update_info(self, conn, value, positives, db_path):
+    def update_info(self, conn, value, positives, tags, db_path):
         now = datetime.now()
-        with conn:
-            cursor = conn.cursor()
-            
-            if db_path == 'domains.db':
+        cursor = conn.cursor()
+        
+        try:
+            if db_path.endswith('domains.db'):
                 cursor.execute('''
-                    INSERT INTO known_domains (domain, last_check, positives)
-                    VALUES (?, ?, ?)
+                    INSERT INTO known_domains (domain, last_check, positives, tags)
+                    VALUES (?, ?, ?, ?)
                     ON CONFLICT(domain) DO UPDATE SET
                         last_check = excluded.last_check,
-                        positives = excluded.positives
-                ''', (value[0], now, positives))
+                        positives = excluded.positives,
+                        tags = excluded.tags
+                ''', (value[0], now, positives, ', '.join(tags)))
                 
             else:
                 cursor.execute('''
-                    INSERT INTO known_ips (ip, last_check, positives, process_name)
-                    VALUES (?, ?, ?, ?)
+                    INSERT INTO known_ips (ip, last_check, positives, tags, process_name)
+                    VALUES (?, ?, ?, ?, ?)
                     ON CONFLICT(ip) DO UPDATE SET
                         last_check = excluded.last_check,
                         positives = excluded.positives,
+                        tags = excluded.tags,
                         process_name = excluded.process_name
-                ''', (value[0], now, positives, value[1]))
+                ''', (value[0], now, positives, ', '.join(tags), value[1]))
+            
+            conn.commit()
+        except sqlite3.Error as e:
+            print(f"An error occurred while updating the database: {e}")
+            conn.rollback()
+        finally:
+            cursor.close()
 
 def get_api_key(file_path):
     try:

@@ -38,7 +38,8 @@ class DNSMonitor(threading.Thread):  # Inherit from threading.Thread
                     CREATE TABLE IF NOT EXISTS known_domains (
                         domain TEXT PRIMARY KEY,
                         last_check TIMESTAMP,
-                        positives INTEGER DEFAULT 0
+                        positives INTEGER DEFAULT 0,
+                        tags TEXT
                     )
                 ''')
 
@@ -136,5 +137,6 @@ class DNSMonitor(threading.Thread):  # Inherit from threading.Thread
         """Cleanup resources and close database connections."""
         with self.db_lock:  # Ensure thread-safe cleanup
             if self.conn:
+                self.conn.commit()
                 self.conn.close()
         print("Stopping DNS monitoring...")

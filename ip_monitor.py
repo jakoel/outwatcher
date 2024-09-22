@@ -28,6 +28,7 @@ class IPMonitor(threading.Thread):
                     ip TEXT PRIMARY KEY,
                     last_check TIMESTAMP,
                     positives INTEGER DEFAULT 0,
+                    tags TEXT,
                     process_name TEXT
                 )
             ''')
@@ -104,6 +105,7 @@ class IPMonitor(threading.Thread):
         """Cleanup resources and close database connections."""
         with self.db_lock:  # Ensure thread-safe cleanup
             if self.conn:
+                self.conn.commit()
                 self.conn.close()
         print("Stopping IP monitoring...")
 
