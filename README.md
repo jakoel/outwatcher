@@ -12,7 +12,7 @@ OutWatcher is a powerful network and DNS monitoring tool with integrated OSINT (
 - **Real-time Alerts**: Notifies users of potential threats based on OSINT data.
 - **Customizable Monitoring**: Allows users to choose between IP monitoring, DNS monitoring, or both.
 - **Automatic or Manual Interface Selection**: Offers both automatic and manual selection of network interfaces for monitoring.
-- **Reputation Expiration Handling: Ensures that reputation checks have an expiration date, automatically rechecking Domains and IP addresses if they haven't been seen checked within configurable time period (e.g., 14 days) to maintain up-to-date threat intelligence.
+- **Reputation Expiration Handling**: Ensures that reputation checks have an expiration date, automatically rechecking Domains and IP addresses if they haven't been seen checked within configurable time period (e.g., 14 days) to maintain up-to-date threat intelligence.
 
 ## Technologies Used
 
@@ -76,7 +76,7 @@ Ctrl + C
 - `--vt-key`: Path to the VirusTotal API key file (default: `vt.key`)
 - `--otx-key`: Path to the OTX API key file (default: `otx.key`)
 - `--interface_manual`: Manually select the network interface for DNS monitoring
-- `--expire`: choose the expiration time of target reputation
+- `--expire`: Manually choose the expiration time of target reputation (default is 15 days)
 
 ### Examples
 
