@@ -83,13 +83,20 @@ Ctrl + C
 To run OutWatcher with both IP and DNS monitoring:
 
 ```bash
-python main.py --ip --dns
+python overwatcher.py
+```
+
+
+To run OutWatcher with DNS monitoring only:
+
+```bash
+python overwatcher.py --dns
 ```
 
 To run OutWatcher with DNS monitoring only and manual interface selection:
 
 ```bash
-python main.py --dns --interface_manual
+python overwatcher.py --dns --interface_manual
 ```
 
 ## Project Structure
@@ -97,7 +104,7 @@ python main.py --dns --interface_manual
 ```
 .
 ├── README.md               # Project documentation
-├── main.py                 # Entry point for the application
+├── overwatcher.py                 # Entry point for the application
 ├── ip_monitor.py           # IP monitoring logic
 ├── dns_monitor.py          # DNS monitoring logic
 ├── osint.py                # OSINT (VirusTotal and OTX) integration logic
