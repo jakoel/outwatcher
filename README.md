@@ -39,7 +39,7 @@ pip install scapy psutil requests
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/outwatcher.git
+git clone https://github.com/nirjako/outwatcher.git
 cd outwatcher
 ```
 
