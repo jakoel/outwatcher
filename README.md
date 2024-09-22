@@ -12,6 +12,7 @@ OutWatcher is a powerful network and DNS monitoring tool with integrated OSINT (
 - **Real-time Alerts**: Notifies users of potential threats based on OSINT data.
 - **Customizable Monitoring**: Allows users to choose between IP monitoring, DNS monitoring, or both.
 - **Automatic or Manual Interface Selection**: Offers both automatic and manual selection of network interfaces for monitoring.
+- **IP Reputation Expiration Handling: Ensures that IP reputation checks have an expiration date, automatically rechecking IP addresses if they haven't been seen within a configurable time period (e.g., 14 days) to maintain up-to-date threat intelligence.
 
 ## Technologies Used
 
@@ -62,6 +63,12 @@ cd outwatcher
 ```bash
 python main.py [options]
 ```
+
+### Stop the Application
+```bash
+Ctrl + C
+```
+
 
 **Options**:
 - `--ip`: Enable IP monitoring
