@@ -1,5 +1,5 @@
 # outwatcher
-# Network and DNS Monitoring Tool with OSINT Integration
+## Network and DNS Monitoring Tool with OSINT Integration
 
 ## Overview
 
@@ -29,7 +29,6 @@ This project is a network and DNS monitoring tool with integrated OSINT (Open-So
 
 ### Install Dependencies
 
-```bash
 pip install scapy psutil requests
 
 Clone the Repository
