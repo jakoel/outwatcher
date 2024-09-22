@@ -76,7 +76,7 @@ Ctrl + C
 - `--vt-key`: Path to the VirusTotal API key file (default: `vt.key`)
 - `--otx-key`: Path to the OTX API key file (default: `otx.key`)
 - `--interface_manual`: Manually select the network interface for DNS monitoring
-- `--debug`: Enable debug mode for more detailed output
+- `--expire`: choose the expiration time of target reputation
 
 ### Examples
 
@@ -85,7 +85,6 @@ To run OutWatcher with both IP and DNS monitoring:
 ```bash
 python overwatcher.py
 ```
-
 
 To run OutWatcher with DNS monitoring only:
 
@@ -97,6 +96,12 @@ To run OutWatcher with DNS monitoring only and manual interface selection:
 
 ```bash
 python overwatcher.py --dns --interface_manual
+```
+
+To run OutWatcher with 30 days expiration time for reputation:
+
+```bash
+python overwatcher.py --expire 30
 ```
 
 ## Project Structure
