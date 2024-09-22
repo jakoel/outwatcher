@@ -61,7 +61,7 @@ cd outwatcher
 ### Run the Application
 
 ```bash
-python main.py [options]
+python overwatcher.py [options]
 ```
 
 ### Stop the Application
