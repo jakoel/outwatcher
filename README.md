@@ -1,32 +1,34 @@
-# OutWatcher -  Network and DNS Monitoring Tool with OSINT Integration
+# OutWatcher - Network and DNS Monitoring Tool with OSINT Integration
 
 ## Overview
 
-OutWatcher is a powerful network and DNS monitoring tool with integrated OSINT (Open-Source Intelligence) analysis using **VirusTotal** and **OTX (Open Threat Exchange)**. The application monitors outbound network connections, checks DNS queries, and performs OSINT lookups on IP addresses and domain names.
+OutWatcher is a powerful network and DNS monitoring tool with integrated OSINT (Open-Source Intelligence) analysis using **VirusTotal** and **OTX (Open Threat Exchange)**. The application monitors outbound network connections, checks DNS queries, and performs OSINT lookups on IP addresses and domain names, providing real-time threat intelligence for your network.
 
 ### Features
 
 - **Network Monitoring**: Tracks outbound connections and sends new IP addresses to OSINT services.
 - **DNS Monitoring**: Captures DNS queries and sends new domains to OSINT services.
 - **OSINT Integration**: Uses VirusTotal and OTX to gather intelligence on detected IPs and domains.
+- **Real-time Alerts**: Notifies users of potential threats based on OSINT data.
+- **Customizable Monitoring**: Allows users to choose between IP monitoring, DNS monitoring, or both.
+- **Automatic or Manual Interface Selection**: Offers both automatic and manual selection of network interfaces for monitoring.
 
 ## Technologies Used
 
-- **Python 3.x**
+- **Python 3.x**: Core programming language
 - **Scapy**: For DNS packet sniffing
-- **Psutil**: For monitoring network connections
+- **Psutil**: For monitoring network connections and interface selection
 - **SQLite**: For caching known IPs and domains
 - **VirusTotal API**: For IP and domain intelligence
 - **OTX (Open Threat Exchange) API**: For additional OSINT analysis
+- **Threading**: For concurrent monitoring of network and DNS activities
 
 ## Installation
 
 ### Prerequisites
 
 1. Python 3.x
-2. Scapy
-3. Psutil
-4. Requests
+2. pip (Python package manager)
 
 ### Install Dependencies
 
@@ -58,17 +60,30 @@ cd outwatcher
 ### Run the Application
 
 ```bash
-python main.py --ip --dns
+python main.py [options]
 ```
 
-You can run the application with various options depending on the monitoring you want to perform:
-
 **Options**:
-- `--ip`: Monitor outbound IP connections
-- `--dns`: Monitor DNS queries
+- `--ip`: Enable IP monitoring
+- `--dns`: Enable DNS monitoring
 - `--vt-key`: Path to the VirusTotal API key file (default: `vt.key`)
 - `--otx-key`: Path to the OTX API key file (default: `otx.key`)
 - `--interface_manual`: Manually select the network interface for DNS monitoring
+- `--debug`: Enable debug mode for more detailed output
+
+### Examples
+
+To run OutWatcher with both IP and DNS monitoring:
+
+```bash
+python main.py --ip --dns
+```
+
+To run OutWatcher with DNS monitoring only and manual interface selection:
+
+```bash
+python main.py --dns --interface_manual
+```
 
 ## Project Structure
 
@@ -76,21 +91,33 @@ You can run the application with various options depending on the monitoring you
 .
 ├── README.md               # Project documentation
 ├── main.py                 # Entry point for the application
-├── osint.py                # OSINT (VirusTotal and OTX) integration logic
-├── dns_monitor.py          # DNS monitoring logic
 ├── ip_monitor.py           # IP monitoring logic
+├── dns_monitor.py          # DNS monitoring logic
+├── osint.py                # OSINT (VirusTotal and OTX) integration logic
 ├── vt.key                  # VirusTotal API key (not included in the repo)
 ├── otx.key                 # OTX API key (not included in the repo)
 ├── domains.db              # SQLite database for caching domains
-├── ips.db                  # SQLite database for caching IPs
-└── ...
+└── ips.db                  # SQLite database for caching IPs
 ```
 
 ## Known Issues
 
-- Ensure that the required API keys are valid and placed correctly.
+- Ensure that the required API keys are valid and placed correctly in the respective key files.
 - Some network interfaces may not work with DNS sniffing if permissions are not granted (on Linux, consider running with `sudo`).
+- Large networks may require adjustments to the monitoring frequency for optimal performance.
+
+## Troubleshooting
+
+- If you encounter permission issues, try running the application with elevated privileges.
+- Ensure your firewall is not blocking the application's network access.
+- Check that the necessary Python packages are installed correctly.
 
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+## Acknowledgements
+
+- [VirusTotal](https://www.virustotal.com/) for providing the API for threat intelligence.
+- [AlienVault OTX](https://otx.alienvault.com/) for the Open Threat Exchange platform.
+- All the contributors who have helped to improve OutWatcher.
