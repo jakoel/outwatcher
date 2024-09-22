@@ -1,11 +1,12 @@
 from scapy.all import sniff, DNS, DNSQR, conf
+from datetime import datetime, timedelta
 import threading
 import sqlite3
 import time
 import psutil
 
 class DNSMonitor(threading.Thread):  # Inherit from threading.Thread
-    def __init__(self, print_lock, osint_queue, db_lock, db_path, interface=None,interface_manual=False):
+    def __init__(self, print_lock, osint_queue, db_lock, db_path, interface=None,interface_manual=False, expiration=15):
         super().__init__()  # Properly initialize the thread
         self.stop_event = threading.Event()
         self.print_lock = print_lock
@@ -17,6 +18,7 @@ class DNSMonitor(threading.Thread):  # Inherit from threading.Thread
         self.interface = interface
         self.interface_manual = interface_manual
         self.create_domain_table()
+        self.expiration = expiration
 
         # Choose the interface based on manual or automatic selection
         if self.interface is None:
@@ -28,25 +30,35 @@ class DNSMonitor(threading.Thread):  # Inherit from threading.Thread
                     self.interface = self.choose_interface_auto()
                 
     def create_domain_table(self):
+        ''' Creating table if it's not already exist'''
         with self.db_lock:  # Ensure thread-safe access
             self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
             with self.conn:
                 self.conn.execute('''
                     CREATE TABLE IF NOT EXISTS known_domains (
                         domain TEXT PRIMARY KEY,
-                        first_seen TIMESTAMP,
-                        last_seen TIMESTAMP,
+                        last_check TIMESTAMP,
                         positives INTEGER DEFAULT 0
                     )
                 ''')
 
     def is_domain_known(self, domain):
-        """Check if the domain is already known in the database."""
+        """Check if the domain is already known in the database and if last_checked is within the expiration period."""
+        # Calculate the threshold date (expiration period)
+        threshold_date = (datetime.now() - timedelta(days=self.expiration)).strftime('%Y-%m-%d %H:%M:%S')
+
         with self.db_lock:
             if self.conn is None:
                 return False
             cursor = self.conn.cursor()
-            cursor.execute("SELECT 1 FROM known_domains WHERE domain = ?", (domain,))
+
+            # Query to check if the domain exists and last_check is within the expiration period
+            cursor.execute("""
+                SELECT 1 FROM known_domains 
+                WHERE domain = ? AND last_check > ?
+            """, (domain, threshold_date))
+
+            # If the query returns a result, the domain is known and last_checked is within the expiration period
             return cursor.fetchone() is not None
         
     def choose_interface_manual(self):
@@ -87,17 +99,15 @@ class DNSMonitor(threading.Thread):  # Inherit from threading.Thread
         print(f"Automatically selected the most active interface: {most_active_interface} ({interface_activity[most_active_interface]} packets)")
 
         return most_active_interface
-
+    
     def process_packet(self, packet):
         if DNS in packet and packet[DNS].qr == 0:  # DNS query
             query_name = packet[DNSQR].qname.decode('utf-8').rstrip('.').replace('www.', '').lower()
             if query_name not in self.local_cache and not self.is_domain_known(query_name):
                 with self.print_lock:
-                    print(f"New domain detected: {query_name}, adding to OSINT queue.")
-                    #print(self.local_cache)
+                    print(f"Checking domain: {query_name}")
                 self.local_cache.add(query_name)
-                self.osint_queue.put(query_name)
-
+                self.osint_queue.put((query_name,None))
 
     def run(self):  # Overriding the run method to implement the thread's behavior
         with self.print_lock:
@@ -110,6 +120,7 @@ class DNSMonitor(threading.Thread):  # Inherit from threading.Thread
                     filter="udp port 53",  # Filter only DNS
                     prn=self.process_packet,
                     store=False,  # Prevent storing packets in memory
+                    timeout=10,
                     stop_filter=lambda _: self.stop_event.is_set()
                 )
         except Exception as e:
@@ -126,5 +137,4 @@ class DNSMonitor(threading.Thread):  # Inherit from threading.Thread
         with self.db_lock:  # Ensure thread-safe cleanup
             if self.conn:
                 self.conn.close()
-            with self.print_lock:
-                print("Stopping DNS monitoring...")
+        print("Stopping DNS monitoring...")

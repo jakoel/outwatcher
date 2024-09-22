@@ -24,18 +24,18 @@ class OSINT:
     def check_virus_total(self, data):       
         try:
             # Determine if 'data' is a valid IP address
-            ip_obj = ipaddress.ip_address(data)
+            ip_obj = ipaddress.ip_address(data[0])
             is_ip = True
         except ValueError:
             is_ip = False
         
         # If it's an IP address, check if it's public
         if is_ip:
-            if not self.is_valid_public_ip(data):
-                print(f"Skipping non-public or invalid IP: {data}")
+            if not self.is_valid_public_ip(data[0]):
+                print(f"Skipping non-public or invalid IP: {data[0]}")
                 return
 
-        url = f"https://www.virustotal.com/api/v3/ip_addresses/{data}" if is_ip else f"https://www.virustotal.com/api/v3/domains/{data}"
+        url = f"https://www.virustotal.com/api/v3/ip_addresses/{data[0]}" if is_ip else f"https://www.virustotal.com/api/v3/domains/{data[0]}"
         headers = {"x-apikey": self.vt_api_key}
 
         try:
@@ -45,7 +45,7 @@ class OSINT:
                 json_response = response.json()
                 positives = json_response['data']['attributes']['last_analysis_stats']['malicious']
                 tags = json_response['data']['attributes']['tags']
-                print(f"{data} - Malicious Detections: {positives} with tags: {tags}")
+                print(f"{data[0]} - Malicious Detections: {positives} with tags: {tags}")
 
                 # Update the appropriate database
                 if is_ip:
@@ -59,9 +59,9 @@ class OSINT:
                         self.update_info(conn, data, positives, self.domain_db_path)
                         conn.close()
             else:
-                print(f"Failed to retrieve data for {data}: {response.status_code} - {response.text}")
+                print(f"Failed to retrieve data for {data[0]}: {response.status_code} - {response.text}")
         except Exception as e:
-            print(f"An error occurred while checking {data}: {e}", exc_info=True)
+            print(f"An error occurred while checking {data[0]}: {e}", exc_info=True)
 
     def check_otx(self, indicator):
         try:
@@ -93,16 +93,25 @@ class OSINT:
         now = datetime.now()
         with conn:
             cursor = conn.cursor()
+            
             if db_path == 'domains.db':
                 cursor.execute('''
-                    INSERT INTO known_domains (domain, first_seen, last_seen, positives)
-                    VALUES (?, ?, ?, ?)
-                ''', (value, now, now, positives))
+                    INSERT INTO known_domains (domain, last_check, positives)
+                    VALUES (?, ?, ?)
+                    ON CONFLICT(domain) DO UPDATE SET
+                        last_check = excluded.last_check,
+                        positives = excluded.positives
+                ''', (value[0], now, positives))
+                
             else:
                 cursor.execute('''
-                    INSERT INTO known_ips (ip, first_seen, last_seen, positives)
+                    INSERT INTO known_ips (ip, last_check, positives, process_name)
                     VALUES (?, ?, ?, ?)
-                ''', (value, now, now, positives))
+                    ON CONFLICT(ip) DO UPDATE SET
+                        last_check = excluded.last_check,
+                        positives = excluded.positives,
+                        process_name = excluded.process_name
+                ''', (value[0], now, positives, value[1]))
 
 def get_api_key(file_path):
     try:
