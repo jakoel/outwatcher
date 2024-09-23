@@ -30,6 +30,7 @@ OutWatcher is a powerful network and DNS monitoring tool with integrated OSINT (
 
 1. Python 3.x
 2. pip (Python package manager)
+3. Npcap driver (npcap.com) being used also in Wireshark
 
 ### Install Dependencies
 
@@ -61,7 +62,7 @@ cd outwatcher
 ### Run the Application
 
 ```bash
-python overwatcher.py [options]
+python outwatcher.py [options]
 ```
 
 ### Stop the Application
@@ -83,25 +84,25 @@ Ctrl + C
 To run OutWatcher with both IP and DNS monitoring:
 
 ```bash
-python overwatcher.py
+python outwatcher.py
 ```
 
 To run OutWatcher with DNS monitoring only:
 
 ```bash
-python overwatcher.py --dns
+python outwatcher.py --dns
 ```
 
 To run OutWatcher with DNS monitoring only and manual interface selection:
 
 ```bash
-python overwatcher.py --dns --interface_manual
+python outwatcher.py --dns --interface_manual
 ```
 
 To run OutWatcher with 30 days expiration time for reputation:
 
 ```bash
-python overwatcher.py --expire 30
+python outwatcher.py --expire 30
 ```
 
 ## Project Structure
@@ -109,7 +110,7 @@ python overwatcher.py --expire 30
 ```
 .
 ├── README.md               # Project documentation
-├── overwatcher.py                 # Entry point for the application
+├── outwatcher.py                 # Entry point for the application
 ├── ip_monitor.py           # IP monitoring logic
 ├── dns_monitor.py          # DNS monitoring logic
 ├── osint.py                # OSINT (VirusTotal and OTX) integration logic
