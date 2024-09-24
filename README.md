@@ -13,6 +13,8 @@ OutWatcher is a powerful network and DNS monitoring tool with integrated OSINT (
 - **Customizable Monitoring**: Allows users to choose between IP monitoring, DNS monitoring, or both.
 - **Automatic or Manual Interface Selection**: Offers both automatic and manual selection of network interfaces for monitoring.
 - **Reputation Expiration Handling**: Ensures that reputation checks have an expiration date, automatically rechecking Domains and IP addresses if they haven't been seen checked within configurable time period (e.g., 14 days) to maintain up-to-date threat intelligence.
+-  **Caching and Database usage**: Reducing signifaclly the amount of queries to OSINT resources.
+
 
 ## Technologies Used
 
