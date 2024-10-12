@@ -2,18 +2,19 @@
 
 ## Overview
 
-OutWatcher is a powerful network and DNS monitoring tool with integrated OSINT (Open-Source Intelligence) analysis using **VirusTotal** and **OTX (Open Threat Exchange)**. The application monitors outbound network connections, checks DNS queries, and performs OSINT lookups on IP addresses and domain names, providing real-time threat intelligence for your network.
+OutWatcher is a powerful network, DNS, and process monitoring tool with integrated OSINT (Open-Source Intelligence) analysis using **VirusTotal** and **OTX (Open Threat Exchange)**. The application monitors outbound network connections, checks DNS queries, monitors running processes, and performs OSINT lookups on IP addresses, domain names, and process hashes, providing real-time threat intelligence for your system.
 
 ### Features
 
 - **Network Monitoring**: Tracks outbound connections and sends new IP addresses to OSINT services.
 - **DNS Monitoring**: Captures DNS queries and sends new domains to OSINT services.
+- **Process Monitoring**: Monitors running processes and sends process hashes to OSINT services.
 - **OSINT Integration**: Uses VirusTotal and OTX to gather intelligence on detected IPs and domains.
 - **Real-time Alerts**: Notifies users of potential threats based on OSINT data.
 - **Customizable Monitoring**: Allows users to choose between IP monitoring, DNS monitoring, or both.
 - **Automatic or Manual Interface Selection**: Offers both automatic and manual selection of network interfaces for monitoring.
 - **Reputation Expiration Handling**: Ensures that reputation checks have an expiration date, automatically rechecking Domains and IP addresses if they haven't been seen checked within configurable time period (e.g., 14 days) to maintain up-to-date threat intelligence.
--  **Caching and Database usage**: Reducing signifaclly the amount of queries to OSINT resources.
+- **Caching and Database usage**: Reducing signifaclly the amount of queries to OSINT resources.
 
 
 ## Technologies Used
@@ -76,6 +77,7 @@ Ctrl + C
 **Options**:
 - `--ip`: Enable IP monitoring
 - `--dns`: Enable DNS monitoring
+- `--process`: Enable Process monitoring
 - `--vt-key`: Path to the VirusTotal API key file (default: `vt.key`)
 - `--otx-key`: Path to the OTX API key file (default: `otx.key`)
 - `--interface_manual`: Manually select the network interface for DNS monitoring
@@ -93,6 +95,11 @@ To run OutWatcher with DNS monitoring only:
 
 ```bash
 python outwatcher.py --dns
+```
+To run OutWatcher with Process monitoring only:
+
+```bash
+python outwatcher.py --process
 ```
 
 To run OutWatcher with DNS monitoring only and manual interface selection:
@@ -112,9 +119,11 @@ python outwatcher.py --expire 30
 ```
 .
 ├── README.md               # Project documentation
-├── outwatcher.py                 # Entry point for the application
+├── outwatcher.py           # Entry point for the application
+├── process_monitor.py      # Monitor Abstract Class
 ├── ip_monitor.py           # IP monitoring logic
 ├── dns_monitor.py          # DNS monitoring logic
+├── process_monitor.py      # Process monitoring logic
 ├── osint.py                # OSINT (VirusTotal and OTX) integration logic
 ├── vt.key                  # VirusTotal API key (not included in the repo)
 ├── otx.key                 # OTX API key (not included in the repo)
