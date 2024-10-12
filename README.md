@@ -44,7 +44,7 @@ pip install scapy psutil requests
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/nirjako/outwatcher.git
+git clone https://github.com/jakoel/outwatcher.git
 cd outwatcher
 ```
 
@@ -55,10 +55,10 @@ cd outwatcher
    - OTX: Get your API key [here](https://otx.alienvault.com/api).
 
 2. **Create API Key Files**:
-   - Create a file named `vt.key` and place your VirusTotal API key inside.
-   - Create a file named `otx.key` and place your OTX API key inside.
+   - Create a file named `vt.key` and place your VirusTotal API key inside (plaintext).
+   - Create a file named `otx.key` and place your OTX API key inside (plaintext).
 
-3. **Databases**: SQLite databases for caching domains and IPs will be automatically created (`domains.db` and `ips.db`).
+3. **Databases**: SQLite databases for caching domains, IPs and processes will be automatically created (`domains.db`, `processes.db` and `ips.db`).
 
 ## Usage
 
@@ -134,7 +134,7 @@ python outwatcher.py --expire 30
 ## Known Issues
 
 - Ensure that the required API keys are valid and placed correctly in the respective key files.
-- Some network interfaces may not work with DNS sniffing if permissions are not granted (on Linux, consider running with `sudo`).
+- Some network interfaces may not work with DNS sniffing if permissions are not granted.
 - Large networks may require adjustments to the monitoring frequency for optimal performance.
 
 ## Troubleshooting
