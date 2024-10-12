@@ -2,16 +2,17 @@ import requests
 import sqlite3
 from datetime import datetime
 import ipaddress
-from collections import deque
 
 class OSINT:
-    def __init__(self, print_lock ,vt_api_key, otx_api_key, domain_db_path, ip_db_path, dns_db_lock, ip_db_lock):
+    def __init__(self, print_lock ,vt_api_key, otx_api_key, domain_db_path, ip_db_path, process_db_path ,dns_db_lock, ip_db_lock, process_db_lock):
         self.vt_api_key = vt_api_key
         self.otx_api_key = otx_api_key
         self.domain_db_path = domain_db_path
         self.ip_db_path = ip_db_path
+        self.process_db_path = process_db_path
         self.dns_db_lock = dns_db_lock
         self.ip_db_lock = ip_db_lock
+        self.process_db_lock = process_db_lock
         
     def is_valid_public_ip(self, ip):
         try:
@@ -22,47 +23,51 @@ class OSINT:
             # If ipaddress throws an error, it means the IP is invalid
             return False
         
-    def check_virus_total(self, data):       
-        try:
-            # Determine if 'data' is a valid IP address
-            ip_obj = ipaddress.ip_address(data[0])
-            is_ip = True
-        except ValueError:
-            is_ip = False
-        
-        # If it's an IP address, check if it's public
-        if is_ip:
-            if not self.is_valid_public_ip(data[0]):
-                print(f"Skipping non-public or invalid IP: {data[0]}")
-                return
-
-        url = f"https://www.virustotal.com/api/v3/ip_addresses/{data[0]}" if is_ip else f"https://www.virustotal.com/api/v3/domains/{data[0]}"
+    def check_virus_total(self, data):
+        url = f"https://www.virustotal.com/api/v3/search?query={data[0]}"
         headers = {"x-apikey": self.vt_api_key}
 
         try:
             response = requests.get(url, headers=headers)
-            
+
             if response.status_code == 200:
                 json_response = response.json()
-                positives = json_response['data']['attributes']['last_analysis_stats']['malicious']
-                tags = json_response['data']['attributes']['tags']
-                print(f"[{data[0]}] - VT Detections: {positives} tags: {tags}")
 
-                # Update the appropriate database
-                if is_ip:
+                # Extract analysis stats for malicious detections and tags
+                attributes = json_response.get('data', [{}])[0].get('attributes', {})
+                positives = attributes.get('last_analysis_stats', {}).get('malicious', 0)
+                tags = attributes.get('tags', [])
+
+                if data[1] != None: 
+                    print(f"[{data[1]}][{data[0]}] - VT Detections: {positives} tags: {tags}")
+                else:
+                    print(f"[{data[0]}] - VT Detections: {positives} tags: {tags}")
+
+                # Update the appropriate database based on the type of data (file hash, IP, or domain)
+                # Update the appropriate database (processes, IPs, or domains)
+                if data[1] is not None and self.is_valid_public_ip(data[0]):
+                    # It's an IP address
                     with self.ip_db_lock:
                         conn = sqlite3.connect(self.ip_db_path)
-                        self.update_info(conn, data, positives, tags ,self.ip_db_path)
+                        self.update_info(conn, data, positives, tags)
+                        conn.close()
+                elif data[1] is not None:
+                    # It's a process with sha256 hash and name
+                    with self.process_db_lock:
+                        conn = sqlite3.connect(self.process_db_path)
+                        self.update_info(conn, data, positives, tags)
                         conn.close()
                 else:
+                    # It's a domain
                     with self.dns_db_lock:
                         conn = sqlite3.connect(self.domain_db_path)
-                        self.update_info(conn, data, positives, tags, self.domain_db_path)
+                        self.update_info(conn, data, positives, tags)
                         conn.close()
             else:
                 print(f"Failed to retrieve data for {data[0]}: {response.status_code} - {response.text}")
         except Exception as e:
             print(f"An error occurred while checking {data[0]}: {e}", exc_info=True)
+
 
     def check_otx(self, indicator):
         try:
@@ -98,33 +103,45 @@ class OSINT:
         except Exception as e:
             print(f"An error occurred while retrieving facts for {indicator}: {e}")
 
-
-                 
-    def update_info(self, conn, value, positives, tags, db_path):
+          
+    def update_info(self, conn, data, positives, tags):
         now = datetime.now()
         cursor = conn.cursor()
         
         try:
-            if db_path.endswith('domains.db'):
+            if data[1] is None:
+                # It's a domain update
                 cursor.execute('''
-                    INSERT INTO known_domains (domain, last_check, positives, tags)
+                    INSERT INTO known_domains(domain, last_check, positives, tags)
                     VALUES (?, ?, ?, ?)
                     ON CONFLICT(domain) DO UPDATE SET
                         last_check = excluded.last_check,
                         positives = excluded.positives,
                         tags = excluded.tags
-                ''', (value[0], now, positives, ', '.join(tags)))
-                
-            else:
+                ''', (data[0], now, positives, ', '.join(tags)))
+
+            elif self.is_valid_public_ip(data[0]):
+                # It's an IP address update
                 cursor.execute('''
-                    INSERT INTO known_ips (ip, last_check, positives, tags, process_name)
+                    INSERT INTO known_ips(ip, last_check, positives, tags, process_name)
                     VALUES (?, ?, ?, ?, ?)
                     ON CONFLICT(ip) DO UPDATE SET
                         last_check = excluded.last_check,
                         positives = excluded.positives,
                         tags = excluded.tags,
                         process_name = excluded.process_name
-                ''', (value[0], now, positives, ', '.join(tags), value[1]))
+                ''', (data[0], now, positives, ', '.join(tags), data[1]))
+
+            else:
+                # It's a process update
+                cursor.execute('''
+                    INSERT INTO known_processes(sha256_hash, process_name, last_check, positives, tags)
+                    VALUES (?, ?, ?, ?, ?)
+                    ON CONFLICT(sha256_hash) DO UPDATE SET
+                        last_check = excluded.last_check,
+                        positives = excluded.positives,
+                        tags = excluded.tags
+                ''', (data[0], data[1], now, positives, ', '.join(tags)))
             
             conn.commit()
         except sqlite3.Error as e:

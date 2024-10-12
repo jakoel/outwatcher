@@ -1,24 +1,15 @@
 from scapy.all import sniff, DNS, DNSQR, conf
-from datetime import datetime, timedelta
-import threading
-import sqlite3
-import time
+from monitor import Monitor
 import psutil
+import time
 
-class DNSMonitor(threading.Thread):  # Inherit from threading.Thread
-    def __init__(self, print_lock, osint_queue, db_lock, db_path, interface=None,interface_manual=False, expiration=15):
-        super().__init__()  # Properly initialize the thread
-        self.stop_event = threading.Event()
-        self.print_lock = print_lock
-        self.osint_queue = osint_queue
-        self.db_path = db_path
-        self.db_lock = db_lock
-        self.conn = None
-        self.local_cache = set()  # Local cache to store recently processed domains
+
+class DNSMonitor(Monitor):  # Inherit from threading.Thread
+    def __init__(self, print_lock, osint_queue, db_lock, db_path, interface=None, interface_manual=False, expiration=15):
+        super().__init__(print_lock, osint_queue, db_lock, db_path, expiration)
         self.interface = interface
         self.interface_manual = interface_manual
         self.create_domain_table()
-        self.expiration = expiration
 
         # Choose the interface based on manual or automatic selection
         if self.interface is None:
@@ -30,37 +21,22 @@ class DNSMonitor(threading.Thread):  # Inherit from threading.Thread
                     self.interface = self.choose_interface_auto()
                 
     def create_domain_table(self):
-        ''' Creating table if it's not already exist'''
-        with self.db_lock:  # Ensure thread-safe access
-            self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
-            with self.conn:
-                self.conn.execute('''
-                    CREATE TABLE IF NOT EXISTS known_domains (
-                        domain TEXT PRIMARY KEY,
-                        last_check TIMESTAMP,
-                        positives INTEGER DEFAULT 0,
-                        tags TEXT
-                    )
-                ''')
+        create_sql = '''
+            CREATE TABLE IF NOT EXISTS known_domains (
+                domain TEXT PRIMARY KEY,
+                last_check TIMESTAMP,
+                positives INTEGER DEFAULT 0,
+                tags TEXT
+            )
+        '''
+        self.create_table(create_sql)
 
     def is_domain_known(self, domain):
-        """Check if the domain is already known in the database and if last_checked is within the expiration period."""
-        # Calculate the threshold date (expiration period)
-        threshold_date = (datetime.now() - timedelta(days=self.expiration)).strftime('%Y-%m-%d %H:%M:%S')
-
-        with self.db_lock:
-            if self.conn is None:
-                return False
-            cursor = self.conn.cursor()
-
-            # Query to check if the domain exists and last_check is within the expiration period
-            cursor.execute("""
-                SELECT 1 FROM known_domains 
-                WHERE domain = ? AND last_check > ?
-            """, (domain, threshold_date))
-
-            # If the query returns a result, the domain is known and last_checked is within the expiration period
-            return cursor.fetchone() is not None
+        query_sql = '''
+            SELECT 1 FROM known_domains 
+            WHERE domain = ? AND last_check > ?
+        '''
+        return self.is_known(query_sql, domain)
         
     def choose_interface_manual(self):
         interfaces = list(conf.ifaces.values())
@@ -131,12 +107,8 @@ class DNSMonitor(threading.Thread):  # Inherit from threading.Thread
             self.cleanup()
 
     def stop_monitoring(self):
-        self.stop_event.set()
+        super().stop_monitoring()
 
     def cleanup(self):
-        """Cleanup resources and close database connections."""
-        with self.db_lock:  # Ensure thread-safe cleanup
-            if self.conn:
-                self.conn.commit()
-                self.conn.close()
-        print("Stopping DNS monitoring...")
+        super().cleanup()
+        print("[*] Stopping DNS monitoring.")

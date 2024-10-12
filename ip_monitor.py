@@ -1,55 +1,32 @@
+from monitor import Monitor
 import psutil
-from datetime import datetime,timedelta
 import time
-import threading
-import sqlite3
+
 import ipaddress
 
-class IPMonitor(threading.Thread):
-    def __init__(self, print_lock, osint_queue, db_lock, db_path,expiration=15):
-        super().__init__()  # Properly initialize the thread
-        self.stop_event = threading.Event()
-        self.print_lock = print_lock
-        self.osint_queue = osint_queue
-        self.db_lock = db_lock
-        self.db_path = db_path
-        self.conn = None  # Initialize as None
-        self.local_cache = set()
+class IPMonitor(Monitor):
+    def __init__(self, print_lock, osint_queue, db_lock, db_path, expiration=15):
+        super().__init__(print_lock, osint_queue, db_lock, db_path, expiration)
         self.create_ip_table()
-        self.expiration = expiration
 
     def create_ip_table(self):
-        """Create the known_ips table if it doesn't exist."""
-        # Open the database connection here
-        self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
-        with self.conn:
-            self.conn.execute('''
-                CREATE TABLE IF NOT EXISTS known_ips (
-                    ip TEXT PRIMARY KEY,
-                    last_check TIMESTAMP,
-                    positives INTEGER DEFAULT 0,
-                    tags TEXT,
-                    process_name TEXT
-                )
-            ''')
+        create_sql = '''
+            CREATE TABLE IF NOT EXISTS known_ips (
+                ip TEXT PRIMARY KEY,
+                last_check TIMESTAMP,
+                positives INTEGER DEFAULT 0,
+                tags TEXT,
+                process_name TEXT
+            )
+        '''
+        self.create_table(create_sql)
             
     def is_ip_known(self, ip):
-        """Check if the IP is already known in the database and if last_seen is within the last 14 days."""
-        threshold_date = (datetime.now() - timedelta(self.expiration)).strftime('%Y-%m-%d %H:%M:%S')
-
-        with self.db_lock:
-            if self.conn is None:
-                return False
-            cursor = self.conn.cursor()
-
-            # Query to check if the IP exists and last_check is within the last 14 days
-            cursor.execute("""
-                SELECT 1 FROM known_ips 
-                WHERE ip = ? AND last_check > ?
-            """, (ip, threshold_date))
-
-            # If the query returns a result, the IP is known and last_seen is within 14 days
-            return cursor.fetchone() is not None
+        query_sql = '''
+            SELECT 1 FROM known_ips 
+            WHERE ip = ? AND last_check > ?
+        '''
+        return self.is_known(query_sql, ip)
 
     def is_valid_public_ip(self, ip):
         """Check if the IP address is a valid public IP."""
@@ -76,7 +53,6 @@ class IPMonitor(threading.Thread):
                         process_name = psutil.Process(conn.pid).name() if conn.pid else None
                         self.local_cache.add(conn.raddr.ip)
                         connection_data = {
-                            'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                             'local_ip': conn.laddr.ip,
                             'local_port': conn.laddr.port,
                             'remote_ip': conn.raddr.ip,
@@ -98,14 +74,10 @@ class IPMonitor(threading.Thread):
             
         self.cleanup()
 
-    def stop_monitoring(self): 
-        self.stop_event.set()
+    def stop_monitoring(self):
+        super().stop_monitoring()
 
     def cleanup(self):
-        """Cleanup resources and close database connections."""
-        with self.db_lock:  # Ensure thread-safe cleanup
-            if self.conn:
-                self.conn.commit()
-                self.conn.close()
-        print("Stopping IP monitoring...")
+        super().cleanup()
+        print("[*] Stopping IP monitoring.")
 
